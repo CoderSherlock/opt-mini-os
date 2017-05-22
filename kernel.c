@@ -112,8 +112,9 @@ static void shutdown_thread(void *p)
 /* This should be overridden by the application we are linked against. */
 __attribute__((weak)) int app_main(void *p)
 {
-    printk("kernel.c: dummy main: par=%p\n", p);
-    return 0;
+	printk("Now I am starting the user process.\n");
+	printk("kernel.c: dummy main: par=%p\n", p);
+	return 0;
 }
 
 void start_kernel(void)
@@ -149,7 +150,12 @@ void start_kernel(void)
 #endif
 
     /* Call (possibly overridden) app_main() */
+	
+	/** HYPERVISOR_shutdown(SHUTDOWN_poweroff); */
+	printk("Hello I am in kernel\n");					// HPZ: This is the kernel process
     app_main(NULL);
+
+	/** HYPERVISOR_shutdown(SHUTDOWN_poweroff); */
 
     /* Everything initialised, start idle thread */
     run_idle_thread();
