@@ -18,4 +18,4 @@ name = "Mini-OS"
 
 on_crash = 'destroy'
 
-vif = ['mac=00:16:3e:01:01:01,bridge=xenbr0']
+# vif = ['mac=00:16:3e:01:01:01,bridge=xenbr0']

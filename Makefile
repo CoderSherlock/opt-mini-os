@@ -146,7 +146,7 @@ APP_LDLIBS += -lm
 LDLIBS += -lc
 endif
 
-ifneq ($(APP_OBJS)-$(lwip),-y)
+ifeq ($(APP_OBJS)-$(lwip),-y)
 OBJS := $(filter-out $(OBJ_DIR)/daytime.o, $(OBJS))
 endif
 

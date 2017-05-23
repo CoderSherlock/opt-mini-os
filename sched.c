@@ -228,6 +228,7 @@ void wake(struct thread *thread)
 
 void idle_thread_fn(void *unused)
 {
+	printk("I am died!\n");				// HPZ: Real idle thrad
     threads_started = 1;
     while (1) {
         block(current);

@@ -47,143 +47,162 @@
 #include <xen/features.h>
 #include <xen/version.h>
 
+#include <posix/arpa/inet.h>
+#include <posix/netdb.h>
+
 uint8_t xen_features[XENFEAT_NR_SUBMAPS * 32];
 char cmdline[MAX_CMDLINE_SIZE];
 
 void setup_xen_features(void)
 {
-    xen_feature_info_t fi;
-    int i, j;
+	xen_feature_info_t fi;
+	int i, j;
 
-    for (i = 0; i < XENFEAT_NR_SUBMAPS; i++) 
-    {
-        fi.submap_idx = i;
-        if (HYPERVISOR_xen_version(XENVER_get_features, &fi) < 0)
-            break;
-        
-        for (j=0; j<32; j++)
-            xen_features[i*32+j] = !!(fi.submap & 1<<j);
-    }
+	for (i = 0; i < XENFEAT_NR_SUBMAPS; i++) 
+	{
+		fi.submap_idx = i;
+		if (HYPERVISOR_xen_version(XENVER_get_features, &fi) < 0)
+			break;
+
+		for (j=0; j<32; j++)
+			xen_features[i*32+j] = !!(fi.submap & 1<<j);
+	}
 }
 
 #ifdef CONFIG_XENBUS
 /* This should be overridden by the application we are linked against. */
 __attribute__((weak)) void app_shutdown(unsigned reason)
 {
-    struct sched_shutdown sched_shutdown = { .reason = reason };
-    printk("Shutdown requested: %d\n", reason);
-    HYPERVISOR_sched_op(SCHEDOP_shutdown, &sched_shutdown);
+	struct sched_shutdown sched_shutdown = { .reason = reason };
+	printk("Shutdown requested: %d\n", reason);
+	HYPERVISOR_sched_op(SCHEDOP_shutdown, &sched_shutdown);
 }
 
 static void shutdown_thread(void *p)
 {
-    const char *path = "control/shutdown";
-    const char *token = path;
-    xenbus_event_queue events = NULL;
-    char *shutdown = NULL, *err;
-    unsigned int shutdown_reason;
-    xenbus_watch_path_token(XBT_NIL, path, token, &events);
-    while ((err = xenbus_read(XBT_NIL, path, &shutdown)) != NULL || !strcmp(shutdown, ""))
-    {
-        free(err);
-        free(shutdown);
-        shutdown = NULL;
-        xenbus_wait_for_watch(&events);
-    }
-    err = xenbus_unwatch_path_token(XBT_NIL, path, token);
-    free(err);
-    err = xenbus_write(XBT_NIL, path, "");
-    free(err);
-    printk("Shutting down (%s)\n", shutdown);
+	const char *path = "control/shutdown";
+	const char *token = path;
+	xenbus_event_queue events = NULL;
+	char *shutdown = NULL, *err;
+	unsigned int shutdown_reason;
+	xenbus_watch_path_token(XBT_NIL, path, token, &events);
+	while ((err = xenbus_read(XBT_NIL, path, &shutdown)) != NULL || !strcmp(shutdown, ""))
+	{
+		free(err);
+		free(shutdown);
+		shutdown = NULL;
+		xenbus_wait_for_watch(&events);
+	}
+	err = xenbus_unwatch_path_token(XBT_NIL, path, token);
+	free(err);
+	err = xenbus_write(XBT_NIL, path, "");
+	free(err);
+	printk("Shutting down (%s)\n", shutdown);
 
-    if (!strcmp(shutdown, "poweroff"))
-        shutdown_reason = SHUTDOWN_poweroff;
-    else if (!strcmp(shutdown, "reboot"))
-        shutdown_reason = SHUTDOWN_reboot;
-    else
-        /* Unknown */
-        shutdown_reason = SHUTDOWN_crash;
-    app_shutdown(shutdown_reason);
-    free(shutdown);
+	if (!strcmp(shutdown, "poweroff"))
+		shutdown_reason = SHUTDOWN_poweroff;
+	else if (!strcmp(shutdown, "reboot"))
+		shutdown_reason = SHUTDOWN_reboot;
+	else
+		/* Unknown */
+		shutdown_reason = SHUTDOWN_crash;
+	app_shutdown(shutdown_reason);
+	free(shutdown);
 }
 #endif
 
+char *get_ip(char *host)
+{
+	struct hostent *hent;
+	int iplen = 15; //XXX.XXX.XXX.XXX
+	char *ip = (char *)malloc(iplen+1);
+	memset(ip, 0, iplen+1);
+	if((hent = gethostbyname(host)) == NULL)
+	{
+		/** herror("Can't get IP"); */
+		/** exit(1); */
+		return 0;
+	}
+	return hent->h_addr;
+	return ip;
+}
 
 /* This should be overridden by the application we are linked against. */
 __attribute__((weak)) int app_main(void *p)
 {
 	printk("Now I am starting the user process.\n");
 	printk("kernel.c: dummy main: par=%p\n", p);
+	printk("IP address of %s is %s.\n", "www.google.com", get_ip("www.google.com"));
 	return 0;
 }
 
 void start_kernel(void)
 {
-    /* Set up events. */
-    init_events();
+	/* Set up events. */
+	init_events();
 
-    /* ENABLE EVENT DELIVERY. This is disabled at start of day. */
-    local_irq_enable();
+	/* ENABLE EVENT DELIVERY. This is disabled at start of day. */
+	local_irq_enable();
 
-    setup_xen_features();
+	setup_xen_features();
 
-    /* Init memory management. */
-    init_mm();
+	/* Init memory management. */
+	init_mm();
 
-    /* Init time and timers. */
-    init_time();
+	/* Init time and timers. */
+	init_time();
 
-    /* Init the console driver. */
-    init_console();
+	/* Init the console driver. */
+	init_console();
 
-    /* Init grant tables */
-    init_gnttab();
-    
-    /* Init scheduler. */
-    init_sched();
- 
-    /* Init XenBus */
-    init_xenbus();
+	/* Init grant tables */
+	init_gnttab();
+
+	/* Init scheduler. */
+	init_sched();
+
+	/* Init XenBus */
+	init_xenbus();
 
 #ifdef CONFIG_XENBUS
-    create_thread("shutdown", shutdown_thread, NULL);
+	create_thread("shutdown", shutdown_thread, NULL);
 #endif
 
-    /* Call (possibly overridden) app_main() */
-	
+	/* Call (possibly overridden) app_main() */
+
 	/** HYPERVISOR_shutdown(SHUTDOWN_poweroff); */
 	printk("Hello I am in kernel\n");					// HPZ: This is the kernel process
-    app_main(NULL);
+	app_main(NULL);
 
 	/** HYPERVISOR_shutdown(SHUTDOWN_poweroff); */
 
-    /* Everything initialised, start idle thread */
-    run_idle_thread();
+	/* Everything initialised, start idle thread */
+	run_idle_thread();
 }
 
 void stop_kernel(void)
 {
-    /* TODO: fs import */
+	/* TODO: fs import */
 
-    local_irq_disable();
+	local_irq_disable();
 
-    /* Reset grant tables */
-    fini_gnttab();
+	/* Reset grant tables */
+	fini_gnttab();
 
-    /* Reset XenBus */
-    fini_xenbus();
+	/* Reset XenBus */
+	fini_xenbus();
 
-    /* Reset timers */
-    fini_time();
+	/* Reset timers */
+	fini_time();
 
-    /* Reset memory management. */
-    fini_mm();
+	/* Reset memory management. */
+	fini_mm();
 
-    /* Reset events. */
-    fini_events();
+	/* Reset events. */
+	fini_events();
 
-    /* Reset arch details */
-    arch_fini();
+	/* Reset arch details */
+	arch_fini();
 }
 
 /*
@@ -195,11 +214,11 @@ void stop_kernel(void)
 
 void do_exit(void)
 {
-    printk("Do_exit called!\n");
-    arch_do_exit();
-    for( ;; )
-    {
-        struct sched_shutdown sched_shutdown = { .reason = SHUTDOWN_crash };
-        HYPERVISOR_sched_op(SCHEDOP_shutdown, &sched_shutdown);
-    }
+	printk("Do_exit called!\n");
+	arch_do_exit();
+	for( ;; )
+	{
+		struct sched_shutdown sched_shutdown = { .reason = SHUTDOWN_crash };
+		HYPERVISOR_sched_op(SCHEDOP_shutdown, &sched_shutdown);
+	}
 }
