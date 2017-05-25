@@ -20,7 +20,7 @@
 #ifndef _MINIOS_SYS_TIME_H_
 #define _MINIOS_SYS_TIME_H_
 
-#ifdef HAVE_LIBC
+#ifndef HAVE_LIBC  // HPZ: I do change here.
 #include_next <sys/time.h>
 
 #else

@@ -63,7 +63,8 @@
 #include <string.h>
 
 #if MEM_LIBC_MALLOC
-#include <stdlib.h> /* for malloc()/free() */
+//#include <stdlib.h> /* for malloc()/free() */
+#include "posix/stdlib.h"	// HPZ: Change to Posix 
 #endif
 
 #if MEM_LIBC_MALLOC || MEM_USE_POOLS
