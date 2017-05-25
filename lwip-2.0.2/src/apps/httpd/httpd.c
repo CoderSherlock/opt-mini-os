@@ -100,7 +100,7 @@
 
 #include <string.h> /* memset */
 //#include <stdlib.h> /* atoi */
-#include "posix/stdlib.h"	// HPZ: Replace the other one
+//#include "posix/stdlib.h"	// HPZ: Replace the other one
 #include <stdio.h>
 
 #if LWIP_TCP && LWIP_CALLBACK_API

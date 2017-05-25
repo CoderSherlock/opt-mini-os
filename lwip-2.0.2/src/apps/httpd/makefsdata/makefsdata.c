@@ -12,14 +12,14 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
+#include "posix/stdlib.h"	// HPZ: Change to Mini-OS Posix Lib
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
 #include "windows.h"
 #else
-#include <dir.h>
+/** #include <dir.h> */
 #endif
-#include <dos.h>
+/** #include <dos.h> */
 #include <string.h>
 #include <time.h>
 #include <sys/stat.h>
