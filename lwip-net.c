@@ -64,6 +64,9 @@
 
 #include <netfront.h>
 
+#include "lwip/inet.h"
+#include "lwip/netif.h"
+
 /* Define those to better describe your network interface. */
 #define IFNAME0 'e'
 #define IFNAME1 'n'
@@ -79,7 +82,7 @@ static struct netfront_dev *dev;
 
 /* Forward declarations. */
 static err_t netfront_output(struct netif *netif, struct pbuf *p,
-             struct ip_addr *ipaddr);
+        const ip_addr_t *ipaddr);
 
 /*
  * low_level_output():
@@ -137,7 +140,7 @@ low_level_output(struct netif *netif, struct pbuf *p)
 
 static err_t
 netfront_output(struct netif *netif, struct pbuf *p,
-      struct ip_addr *ipaddr)
+      const struct ip_addr *ipaddr)
 {
   
  /* resolve hardware address, then send (or queue) packet */
