@@ -66,6 +66,7 @@
 
 #include "lwip/inet.h"
 #include "lwip/netif.h"
+#include "lwip/ip4_addr.h"
 
 /* Define those to better describe your network interface. */
 #define IFNAME0 'e'
@@ -140,7 +141,7 @@ low_level_output(struct netif *netif, struct pbuf *p)
 
 static err_t
 netfront_output(struct netif *netif, struct pbuf *p,
-      const struct ip_addr *ipaddr)
+      const ip4_addr_t *ipaddr)
 {
   
  /* resolve hardware address, then send (or queue) packet */
@@ -217,7 +218,7 @@ netfront_input(struct netif *netif, unsigned char* data, int len)
       
   case ETHTYPE_ARP:
     /* pass p to ARP module  */
-    etharp_arp_input(netif, (struct eth_addr *) netif->hwaddr, p);
+    /** etharp_arp_input(netif, (struct eth_addr *) netif->hwaddr, p); */ // HPZ: TODO
     break;
 
   default:
@@ -247,7 +248,7 @@ void netif_rx(unsigned char* data, int len)
 /*
  * Set the IP, mask and gateway of the IF
  */
-void networking_set_addr(struct ip_addr *ipaddr, struct ip_addr *netmask, struct ip_addr *gw)
+void networking_set_addr(struct ip4_addr *ipaddr, struct ip4_addr *netmask, struct ip4_addr *gw)
 {
   netif_set_ipaddr(the_interface, ipaddr);
   netif_set_netmask(the_interface, netmask);
@@ -343,9 +344,9 @@ static void tcpip_bringup_finished(void *p)
 void start_networking(void)
 {
   struct netif *netif;
-  struct ip_addr ipaddr = { htonl(IF_IPADDR) };
-  struct ip_addr netmask = { htonl(IF_NETMASK) };
-  struct ip_addr gw = { 0 };
+  struct ip4_addr ipaddr = { htonl(IF_IPADDR) };
+  struct ip4_addr netmask = { htonl(IF_NETMASK) };
+  struct ip4_addr gw = { 0 };
   char *ip = NULL;
 
   tprintk("Waiting for network.\n");
