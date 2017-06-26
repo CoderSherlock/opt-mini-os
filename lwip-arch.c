@@ -20,24 +20,27 @@ void sys_init(void)
 
 /* Creates and returns a new semaphore. The "count" argument specifies
  * the initial state of the semaphore. */
-sys_sem_t sys_sem_new(uint8_t count)
+err_t sys_sem_new(sys_sem_t *sem, uint8_t count)
 {
-    struct semaphore *sem = xmalloc(struct semaphore);
-    sem->count = count;
-    init_waitqueue_head(&sem->wait);
-    return sem;
+	err_t err = ERR_OK;
+	/** struct semaphore *semi = xmalloc(struct semaphore); */	// HPZ
+	/** *sem = semi; */
+	*sem = xmalloc(struct semaphore);
+    (*sem)->count = count;
+    init_waitqueue_head(&(*sem)->wait);
+    return err;
 }
 
 /* Deallocates a semaphore. */
-void sys_sem_free(sys_sem_t sem)
+void sys_sem_free(sys_sem_t *sem)
 {
-    xfree(sem);
+    xfree(*sem);
 }
 
 /* Signals a semaphore. */
-void sys_sem_signal(sys_sem_t sem)
+void sys_sem_signal(sys_sem_t *sem)
 {
-    up(sem);
+    up(*sem);
 }
 
 /* Blocks the thread while waiting for the semaphore to be
@@ -50,7 +53,7 @@ void sys_sem_signal(sys_sem_t sem)
  * semaphore wasn't signaled within the specified time, the return value is
  * SYS_ARCH_TIMEOUT. If the thread didn't have to wait for the semaphore
  * (i.e., it was already signaled), the function may return zero. */
-uint32_t sys_arch_sem_wait(sys_sem_t sem, uint32_t timeout)
+uint32_t sys_arch_sem_wait(sys_sem_t *sem, uint32_t timeout)
 {
     /* Slightly more complicated than the normal minios semaphore:
      * need to wake on timeout *or* signal */
@@ -64,17 +67,17 @@ uint32_t sys_arch_sem_wait(sys_sem_t sem, uint32_t timeout)
 	deadline = then + MILLISECS(timeout);
 
     while(1) {
-        wait_event_deadline(sem->wait, (sem->count > 0), deadline);
+        wait_event_deadline((*sem)->wait, ((*sem)->count > 0), deadline);
 
         prot = sys_arch_protect();
 	/* Atomically check that we can proceed */
-	if (sem->count > 0 || (deadline && NOW() >= deadline))
+	if ((*sem)->count > 0 || (deadline && NOW() >= deadline))
 	    break;
         sys_arch_unprotect(prot);
     }
 
-    if (sem->count > 0) {
-        sem->count--;
+    if ((*sem)->count > 0) {
+        (*sem)->count--;
         sys_arch_unprotect(prot);
         return NSEC_TO_MSEC(NOW() - then); 
     }
@@ -84,30 +87,30 @@ uint32_t sys_arch_sem_wait(sys_sem_t sem, uint32_t timeout)
 }
 
 /* Creates an empty mailbox. */
-sys_mbox_t sys_mbox_new(int size)
+err_t sys_mbox_new(sys_mbox_t *mbox, int size)	// HPZ: DO some changes, same as semaphore.
 {
-    struct mbox *mbox = xmalloc(struct mbox);
+    *mbox = xmalloc(struct mbox);
     if (!size)
         size = 32;
     else if (size == 1)
         size = 2;
-    mbox->count = size;
-    mbox->messages = xmalloc_array(void*, size);
-    init_SEMAPHORE(&mbox->read_sem, 0);
-    mbox->reader = 0;
-    init_SEMAPHORE(&mbox->write_sem, size);
-    mbox->writer = 0;
-    return mbox;
+    (*mbox)->count = size;
+    (*mbox)->messages = xmalloc_array(void*, size);
+    init_SEMAPHORE(&(*mbox)->read_sem, 0);
+    (*mbox)->reader = 0;
+    init_SEMAPHORE(&(*mbox)->write_sem, size);
+    (*mbox)->writer = 0;
+    return ERR_OK; 
 }
 
 /* Deallocates a mailbox. If there are messages still present in the
  * mailbox when the mailbox is deallocated, it is an indication of a
  * programming error in lwIP and the developer should be notified. */
-void sys_mbox_free(sys_mbox_t mbox)
+void sys_mbox_free(sys_mbox_t *mbox)
 {
-    ASSERT(mbox->reader == mbox->writer);
-    xfree(mbox->messages);
-    xfree(mbox);
+    ASSERT((*mbox)->reader == (*mbox)->writer);
+    xfree((*mbox)->messages);
+    xfree(*mbox);
 }
 
 /* Posts the "msg" to the mailbox, internal version that actually does the
@@ -126,22 +129,22 @@ static void do_mbox_post(sys_mbox_t mbox, void *msg)
 }
 
 /* Posts the "msg" to the mailbox. */
-void sys_mbox_post(sys_mbox_t mbox, void *msg)
+void sys_mbox_post(sys_mbox_t *mbox, void *msg)
 {
-    if (mbox == SYS_MBOX_NULL)
+    if (*mbox == SYS_MBOX_NULL)
         return;
-    down(&mbox->write_sem);
-    do_mbox_post(mbox, msg);
+    down(&(*mbox)->write_sem);
+    do_mbox_post(*mbox, msg);
 }
 
 /* Try to post the "msg" to the mailbox. */
-err_t sys_mbox_trypost(sys_mbox_t mbox, void *msg)
+err_t sys_mbox_trypost(sys_mbox_t *mbox, void *msg)
 {
-    if (mbox == SYS_MBOX_NULL)
+    if (*mbox == SYS_MBOX_NULL)
         return ERR_BUF;
-    if (!trydown(&mbox->write_sem))
+    if (!trydown(&(*mbox)->write_sem))
         return ERR_MEM;
-    do_mbox_post(mbox, msg);
+    do_mbox_post(*mbox, msg);
     return ERR_OK;
 }
 
@@ -174,17 +177,18 @@ static void do_mbox_fetch(sys_mbox_t mbox, void **msg)
  * The return values are the same as for the sys_arch_sem_wait() function:
  * Number of milliseconds spent waiting or SYS_ARCH_TIMEOUT if there was a
  * timeout. */
-uint32_t sys_arch_mbox_fetch(sys_mbox_t mbox, void **msg, uint32_t timeout)
+uint32_t sys_arch_mbox_fetch(sys_mbox_t *mbox, void **msg, uint32_t timeout)
 {
     uint32_t rv;
-    if (mbox == SYS_MBOX_NULL)
+    if (*mbox == SYS_MBOX_NULL)
         return SYS_ARCH_TIMEOUT;
 
-    rv = sys_arch_sem_wait(&mbox->read_sem, timeout);
+	sys_sem_t tmp_sem = &((*mbox)->read_sem);
+    rv = sys_arch_sem_wait(&tmp_sem, timeout);
     if ( rv == SYS_ARCH_TIMEOUT )
         return rv;
 
-    do_mbox_fetch(mbox, msg);
+    do_mbox_fetch(*mbox, msg);
     return 0;
 }
 
@@ -199,14 +203,14 @@ uint32_t sys_arch_mbox_fetch(sys_mbox_t mbox, void **msg, uint32_t timeout)
  *     sys_arch_mbox_fetch(mbox,msg,1)
  * although this would introduce unnecessary delays. */
 
-uint32_t sys_arch_mbox_tryfetch(sys_mbox_t mbox, void **msg) {
-    if (mbox == SYS_MBOX_NULL)
+uint32_t sys_arch_mbox_tryfetch(sys_mbox_t *mbox, void **msg) {
+    if (*mbox == SYS_MBOX_NULL)
         return SYS_ARCH_TIMEOUT;
 
-    if (!trydown(&mbox->read_sem))
+    if (!trydown(&(*mbox)->read_sem))
 	return SYS_MBOX_EMPTY;
 
-    do_mbox_fetch(mbox, msg);
+    do_mbox_fetch(*mbox, msg);
     return 0;
 }
 
@@ -220,10 +224,11 @@ uint32_t sys_arch_mbox_tryfetch(sys_mbox_t mbox, void **msg) {
  * In a single threadd sys_arch implementation, this function will
  * simply return a pointer to a global sys_timeouts variable stored in
  * the sys_arch module. */
-struct sys_timeouts *sys_arch_timeouts(void) 
+struct sys_timeout *sys_arch_timeouts(void) 
 {
-    static struct sys_timeouts timeout;
-    return &timeout;
+    /** static struct sys_timeo timeout; */	//HPZ: I'll fix this later.
+    /** return &timeout; */
+	return NULL;
 }
 
 
@@ -232,7 +237,8 @@ struct sys_timeouts *sys_arch_timeouts(void)
  * thread() function. The id of the new thread is returned. Both the id and
  * the priority are system dependent. */
 static struct thread *lwip_thread;
-sys_thread_t sys_thread_new(char *name, void (* thread)(void *arg), void *arg, int stacksize, int prio)
+/** sys_thread_t sys_thread_new(char *name, void (* thread)(void *arg), void *arg, int stacksize, int prio) */
+sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread, void *arg, int stacksize, int prio)
 {
     struct thread *t;
     if (stacksize > STACK_SIZE) {
@@ -240,7 +246,7 @@ sys_thread_t sys_thread_new(char *name, void (* thread)(void *arg), void *arg, i
                 stacksize, (unsigned long) STACK_SIZE);
         do_exit();
     }
-    lwip_thread = t = create_thread(name, thread, arg);
+    lwip_thread = t = create_thread((char*)name, (void*)thread, arg); // HPZ: This could cause problems.
     return t;
 }
 

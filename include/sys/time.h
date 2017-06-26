@@ -20,7 +20,7 @@
 #ifndef _MINIOS_SYS_TIME_H_
 #define _MINIOS_SYS_TIME_H_
 
-#ifdef HAVE_LIBC
+#ifdef HAVE_LIBC  // HPZ: I do change here.
 #include_next <sys/time.h>
 
 #else
@@ -32,12 +32,15 @@ struct timespec {
 struct timezone {
 };
 
+#ifndef _STRUCT_TIMEVAL
+#define _STRUCT_TIMEVAL 1
 struct timeval {
 	time_t		tv_sec;		/* seconds */
 	suseconds_t	tv_usec;	/* microseconds */
 };
 
 int      gettimeofday(struct timeval *tv, void *tz);
+#endif
 
 #endif
 #ifdef HAVE_LIBC

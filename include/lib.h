@@ -104,8 +104,8 @@ void	*memcpy(void *to, const void *from, size_t len);
 size_t strnlen(const char *, size_t);
 
 unsigned long strtoul(const char *nptr, char **endptr, int base);
-int64_t strtoq(const char *nptr, char **endptr, int base);
-uint64_t strtouq(const char *nptr, char **endptr, int base);
+// int64_t strtoq(const char *nptr, char **endptr, int base);
+// uint64_t strtouq(const char *nptr, char **endptr, int base);
 
 extern int sprintf(char * buf, const char * fmt, ...)
         __attribute__ ((format (printf, 2, 3)));

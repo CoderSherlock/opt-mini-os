@@ -20,5 +20,5 @@ extern struct wait_queue_head netfront_queue;
 void start_networking(void);
 void stop_networking(void);
 
-void networking_set_addr(struct ip_addr *ipaddr, struct ip_addr *netmask, struct ip_addr *gw);
+void networking_set_addr(struct ip4_addr *ipaddr, struct ip4_addr *netmask, struct ip4_addr *gw);
 #endif

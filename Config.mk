@@ -99,8 +99,8 @@ endif
 ifneq ($(LWIPDIR),)
 lwip=y
 DEF_CPPFLAGS += -DHAVE_LWIP
-DEF_CPPFLAGS += -isystem $(LWIPDIR)/src/include
-DEF_CPPFLAGS += -isystem $(LWIPDIR)/src/include/ipv4
+# DEF_CPPFLAGS += -isystem $(LWIPDIR)/src/include
+# DEF_CPPFLAGS += -isystem $(LWIPDIR)/src/include/ipv4
 endif
 
 # Set tools
