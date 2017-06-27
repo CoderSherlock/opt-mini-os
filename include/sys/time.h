@@ -32,7 +32,7 @@ struct timespec {
 struct timezone {
 };
 
-#ifndef _STRUCT_TIMEVAL
+#ifndef _STRUCT_TIMEVAL			// HPZ: I add this to avoid conflict from sys_time.h
 #define _STRUCT_TIMEVAL 1
 struct timeval {
 	time_t		tv_sec;		/* seconds */
